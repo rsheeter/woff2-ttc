@@ -59,6 +59,7 @@
         <dt>Editors:</dt>
         <dd>Vladimir Levantovsky (Monotype)</dd>
         <dd>Raph Levien (Google)</dd>
+        <dd>Me Too? :D</dd>
       </dl>
       <p class="copyright"><a href="http://www.w3.org/Consortium/Legal/ipr-notice#Copyright">Copyright</a>
         © 2014 <a href="http://www.w3.org/"><abbr title="World Wide Web Consortium">W3C</abbr></a><sup>®</sup>
@@ -120,6 +121,8 @@
        <a href="#DataTypes">&nbsp;&nbsp;&nbsp;&nbsp;3.1.&nbsp;Data types</a><br/>
        <a href="#woff20Header">&nbsp;&nbsp;&nbsp;&nbsp;3.2.&nbsp;WOFF2 Header</a><br/>
        <a href="#table_dir_format">4.&nbsp;Table directory format</a><br/>
+       <a href="#collection_format">5.&nbsp;Collection directory format</a><br/>
+       TODO: update numbering<br/>
        <a href="#table_format">5.&nbsp;Compressed data format</a><br/>
        <a href="#glyf_table_format">&nbsp;&nbsp;&nbsp;&nbsp;5.1.&nbsp;Transformed glyf table format</a><br/>
        <a href="#triplet_decoding">&nbsp;&nbsp;&nbsp;&nbsp;5.2.&nbsp;Decoding of variable-length X and Y coordinates</a><br/>
@@ -450,6 +453,60 @@
         when the WOFF2 data is decoded.</p>
     </div>
 
+    <h2 id="collection_format">5.&nbsp;Collection directory format</h2>
+    <p>The collection directory is present only if the input font is a collection. That is, if
+    the WOFF2 <a href="#woff20Header">file header</a> "flavor" field value has the value 0x74746366 ('ttcf').</p>
+
+    <p>If input font is a collection, the <a href="#table_dir_format">table directory</a> contains one entry for each
+    unique table in the entire collection. That is, the table director for the collection compressed with WOFF2 comprises
+    all tables from all fonts contained in the collection.</p>
+
+    <p>The collection directory, if present, follows immediately
+    after the table directory. The collection directory consists of a CollectionHeader and one or
+    more CollectionFontEntry records.</p>
+
+    <table border="2" style="background-color: #FFFFFF;">
+      <col class="type"/><col class="name"/><col class="desc"/>
+      <tr class="header"><th colspan="3" style="background-color: #F8F8F8">CollectionHeader</th></tr>
+      <tr><td>UInt32&nbsp;&nbsp;</td><td>version</td><td>The Version of the TTC Header in the original font.</td></tr>
+      <tr><td>UInt32&nbsp;&nbsp;</td><td>numFonts</td><td>The number of fonts in the collection.</td></tr>
+    </table>
+
+    <p>Immediately after the CollectionHeader follows one CollectionFontEntry per font in the collection (CollectionHeader "numFonts")</p>
+    <table border="2" style="background-color: #FFFFFF;">
+      <col class="type"/><col class="name"/><col class="desc"/>
+      <tr class="header"><th colspan="3" style="background-color: #F8F8F8">CollectionFontEntry</th></tr>
+      <tr><td>UInt16&nbsp;&nbsp;</td><td>numTables</td><td>The number of tables in this font</td></tr>
+      <tr><td>UInt32&nbsp;&nbsp;</td><td>flavor</td><td>The "sfnt version" of the font</td></tr>
+      <tr><td>UInt16&nbsp;&nbsp;</td><td>index[numTables]</td><td>The Table Directory index of each table in this font (a stream of numTables UInt16 values)</td></tr>
+    </table>
+
+    <p>An encoder MUST emit one TableDirectoryEntry for each unique table offset. Thus, for a collection that contains multiple fonts that have Table Records with the same offset, an encoder MUST emit only one TableDirectoryEntry for that offset.
+    An encoder MUST put the index of the matching TableDirectoryEntry into the TTC Font Entry for each font. A decoder MUST
+    restore the collection with the same number of Offset Tables. The Offset Tables within the output collection MUST have either the same numTables as the input collection or one less if DSIG is present in the original Offset Table.<p>
+
+    <p>A decoder, when processing a collection, MUST emit a collection containing the same number of fonts with the same number of tables in each font (Offset Table, numTables) as were in the original font. The nested fonts MUST be in the same order as they were in the input collection.
+    The tables within each nested font can be reordered. If the CollectionHeader "version" is 0x00020000 a decoder MUST set the TTC Header fields {ulDsigTag, ulDsigLength, ulDsigOffset} in the output collection to 0.</p>
+
+    <div class="note" id="collection_head_note">
+      <p>Retention of font order in collection is required for CSS fragment identifiers to ever work.</p>
+      <p>The calculation of the <span class=tt>head</span> table "checkSumAdjustment" for fonts within a collection is not well defined.
+      The definition of the "whole font" and how to handle multiple <span class=tt>head</span> tables is unclear.</p>
+    </div>
+    <p>
+
+    <p>If a collection contains multiple unique <span class=tt>glyf</span> and <span class=tt>loca</span> tables, the transformations described for the
+    Compressed data format MUST be applied to each. A table whose offset is referred to by multiple Offset Tables in the original collection may
+    be considered "shared". An encoder MUST reject a collection containing fonts that share exactly one of <span class=tt>glyf</span> and <span class=tt>loca</span>. Sharing neither nor <span class=tt>glyf</span> nor <span class=tt>loca</span> or sharing both is acceptable.</p>
+
+    <pre>
+      TTC TODO
+      How does extended metadata and private data block work w/TTC?
+      write tests and link appropriately (Put the little AT/FF highlight & links in for normative statements)
+      Update section numbering (prev sections 5 and higher ++)
+      Update anything that refers to table ordering, etc to address multiple copies of table (updated a few but doubtless not all)
+    </pre>
+
     <h2 id="table_format">5.&nbsp;Compressed data format</h2>
 
     <p>The CompressedFontData field in a WOFF2 file contains the concatenation of
@@ -483,8 +540,10 @@
       the decoder MUST recalculate the checkSum value for each decoded table.</span>
       Also, due to modifying transofrms applied to <span class=tt>glyf</span> and <span class=tt>loca</span>
       tables, <span class="conform ua" id="conform-mustRecalculateHeadCheckSum">the decoder
-      MUST recalculate the <span class=tt>checkSumAdjustmentglyf</span> value of the entire
-      font and MUST store the updated value in the <span class=tt>head</span> table.</span></p>
+      MUST recalculate the <span class=tt>checkSumAdjustment</span> value of the entire
+      font and MUST store the updated value in the <span class=tt>head</span> table.</span>
+      Note that <span class=tt>checkSumAdjustment</span> calculation for collections is not well defined; see
+      <a href="#collection_head_note">note</a>.</p>
 
     <div class="note">
       <p>The known table flag values should not be relied upon in determining the presense of
@@ -508,13 +567,17 @@
     <p><span class="conform ff" id="conform-mustTransformTables">A transform MUST be applied
       to two types of tables: <span class=tt>glyf</span>, representing outline data, and <span class=tt>loca</span>,
       representing the offsets of the individual glyphs within a <span class=tt>glyf</span> table,
-      if these tables are present in a font</span>. <span class="conform at" id="mustUseTransform">An authoring
-      tool must  transform the <span class=tt>glyf</span> and <span class=tt>loca</span> tables</span>.
+      if these tables are present</span>. <span class="conform at" id="mustUseTransform">An authoring
+      tool must  transform all <span class=tt>glyf</span> and <span class=tt>loca</span> tables</span>.
       Additional constraints apply, as specified in section <a href="#table_order">5.4</a>.
       The <span class=tt>glyf</span> table transformation is specified in section
       <a href="#glyf_table_format">5.1</a>, and the <span class=tt>loca</span> table transformation
       is specified in section <a href="#loca_table_format">5.3</a>.</p>
 
+    <div class="note">
+      <p>A collection can contain multiple <span class=tt>glyf</span> and <span class=tt>loca</span> tables.
+      They MUST all be transformed.</p>
+    </div>
     <div class="note">
       <p>Editor's note: Do we need to add the conformance requirement for UA regarding table transforms?</p>
     </div>
@@ -528,13 +591,23 @@
       different WOFF2 decoders may produce an output file that will not be a bitwise match to the
       input font file. These differences will invalidate the 'DSIG' table, if one is present and,
       therefore, the compliant WOFF2 encoder <span class="conform at" id="conform-mustRemoveDSIG">
-      MUST remove the DSIG table from an input font data</span>, prior to applying transformations
+      MUST remove the DSIG table(s) from an input font data</span>, prior to applying transformations
       and entropy coding steps.</p>
 
+    <div class="note">
+      <p>A collection can contain multiple <span class=tt>DSIG</span> tables.
+      They MUST all be removed</p>
+    </div>
+
     <p>The WOFF 2.0 encoders <span class="conform at" id="conform-mustSetBit11">MUST also set
-      bit 11 of the 'flags' field of the <span class=tt>head</span> table</span>
+      bit 11 of the 'flags' field of all <span class=tt>head</span> tables</span>
       (see [<cite><a href="#ref-OFF">OFF</a></cite>] specification) to indicate that
       a recreated font file was subjected to lossless modifying transform.</p>
+
+    <div class="note">
+      <p>A collection can contain multiple <span class=tt>head</span> tables.
+      They MUST all be marked subject to lossless modifying transform.</p>
+    </div>
 
     <h3 id="glyf_table_format">5.1.&nbsp;Transformed <span class=tt>glyf</span> table format</h3>
 
