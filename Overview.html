@@ -478,7 +478,7 @@
       <tr class="header"><th colspan="3" style="background-color: #F8F8F8">CollectionFontEntry</th></tr>
       <tr><td>UInt16&nbsp;&nbsp;</td><td>numTables</td><td>The number of tables in this font</td></tr>
       <tr><td>UInt32&nbsp;&nbsp;</td><td>flavor</td><td>The "sfnt version" of the font</td></tr>
-      <tr><td>UInt16&nbsp;&nbsp;</td><td>index[numTables]</td><td>The Table Directory index of each table in this font (a stream of numTables UInt16 values)</td></tr>
+      <tr><td>255UInt16&nbsp;&nbsp;</td><td>index[numTables]</td><td>The Table Directory index of each table in this font (a stream of numTables 255UInt16 values)</td></tr>
     </table>
 
     <p>An encoder MUST emit one TableDirectoryEntry for each unique table offset. Thus, for a collection that contains multiple fonts that have Table Records with the same offset, an encoder MUST emit only one TableDirectoryEntry for that offset.
